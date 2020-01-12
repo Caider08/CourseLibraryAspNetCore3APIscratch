@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using Library.API.Entities;
 using Library.API.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,7 +36,15 @@ namespace CourseLibrary.API
             //.AddMvC() was used to add things such as pages for views and TagHelpers
 
             //Authentication typically configured here
-            services.AddControllers();
+            services.AddControllers(setupAction =>
+            {
+                //if this is set to false...API will return a default content type if given format is invalid / not supported by our API
+                setupAction.ReturnHttpNotAcceptable = true;
+                //if want to support XML (old way)
+                //setupAction.OutputFormatters.Add(new XmlDataContractSerializerOutputFormatter());
+            }).AddXmlDataContractSerializerFormatters();
+
+            services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
             services.AddScoped<ILibraryRepository, LibraryRepository>();
 
@@ -55,6 +66,19 @@ namespace CourseLibrary.API
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+            }
+            else
+            {
+                app.UseExceptionHandler(appBuilder =>
+                {
+                    appBuilder.Run(async context =>
+                    {
+                        context.Response.StatusCode = 500;
+                        await context.Response.WriteAsync("An unexpected fault happened. Try again later please");
+                    });
+                }
+                //this is also where you'd log the fault
+                        );
             }
 
             app.UseRouting();

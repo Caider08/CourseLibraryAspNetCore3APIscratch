@@ -1,4 +1,5 @@
-﻿using Library.API.Entities;
+﻿using CourseLibrary.API.ResourceParameters;
+using Library.API.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -67,6 +68,39 @@ namespace Library.API.Services
         public IEnumerable<Author> GetAuthors()
         {
             return _context.Authors.OrderBy(a => a.FirstName).ThenBy(a => a.LastName);
+        }
+
+        public IEnumerable<Author> GetAuthors(AuthorsResourceParameters authorsResourceParams)
+        {
+            if(authorsResourceParams == null)
+            {
+                throw new ArgumentNullException(nameof(authorsResourceParams));
+            }
+            if(string.IsNullOrWhiteSpace(authorsResourceParams.MainCategory) && string.IsNullOrWhiteSpace(authorsResourceParams.SearchQuery))
+            {
+                return GetAuthors();
+            }
+
+            var collection = _context.Authors as IQueryable<Author>;
+            //allows us to use Where clauses etc.. on the collection
+
+            if (!string.IsNullOrWhiteSpace(authorsResourceParams.MainCategory))
+            {
+
+                var mainCategory = authorsResourceParams.MainCategory.Trim();
+                collection = collection.Where(a => a.Genre == mainCategory);
+            }
+
+            if(!string.IsNullOrWhiteSpace(authorsResourceParams.SearchQuery))
+            {
+                var searchQuery = authorsResourceParams.SearchQuery.Trim();
+                collection = collection.Where(a => a.Genre.Contains(searchQuery)
+                    || a.FirstName.Contains(searchQuery)
+                    || a.LastName.Contains(searchQuery));
+                
+            }
+
+            return collection.ToList();
         }
 
         public IEnumerable<Author> GetAuthors(IEnumerable<Guid> authorIds)
