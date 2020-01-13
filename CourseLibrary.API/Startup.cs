@@ -42,7 +42,31 @@ namespace CourseLibrary.API
                 setupAction.ReturnHttpNotAcceptable = true;
                 //if want to support XML (old way)
                 //setupAction.OutputFormatters.Add(new XmlDataContractSerializerOutputFormatter());
-            }).AddXmlDataContractSerializerFormatters();
+            }).AddXmlDataContractSerializerFormatters()
+            //the above accepts Date/Time
+            .ConfigureApiBehaviorOptions(setupAction =>
+                {
+                    setupAction.InvalidModelStateResponseFactory = context =>
+                    {
+                        var problemDetails = new ValidationProblemDetails(context.ModelState)
+                        {
+                            Type = "https://courseLibrary.com/modelValidationproblem",
+                            Title = "One or more model validation errors occured.",
+                            Status = StatusCodes.Status422UnprocessableEntity,
+                            Detail = "See the errors property for details.",
+                            Instance = context.HttpContext.Request.Path
+
+                        };
+
+                        problemDetails.Extensions.Add("traceid", context.HttpContext.TraceIdentifier);
+
+                        return new UnprocessableEntityObjectResult(problemDetails)
+                        {
+                            ContentTypes = { "application/problem+json" }
+                        };
+                    };
+
+                });
 
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 

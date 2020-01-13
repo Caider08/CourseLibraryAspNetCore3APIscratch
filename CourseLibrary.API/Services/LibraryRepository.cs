@@ -17,8 +17,14 @@ namespace Library.API.Services
 
         public void AddAuthor(Author author)
         {
+            if (author == null)
+            {
+                throw new ArgumentNullException(nameof(author));
+            }
+
+            //Entity framework will actually do this for us
             author.Id = Guid.NewGuid();
-            _context.Authors.Add(author);
+            
 
             // the repository fills the id (instead of using identity columns)
             if (author.Books.Any())
@@ -28,6 +34,8 @@ namespace Library.API.Services
                     book.Id = Guid.NewGuid();
                 }
             }
+
+            _context.Authors.Add(author);
         }
 
         public void AddBookForAuthor(Guid authorId, Book book)
@@ -131,6 +139,8 @@ namespace Library.API.Services
         public void UpdateBookForAuthor(Book book)
         {
             // no code in this implementation
+            // _mapper.Map() and then doing context.save() is doing it for us
+
         }
 
         public bool Save()

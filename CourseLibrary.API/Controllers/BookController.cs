@@ -76,8 +76,33 @@ namespace CourseLibrary.API.Controllers
             var bookToReturn = _mapper.Map<BookDto>(bookEntity);
             return CreatedAtRoute("GetBookForAuthor", new { authorId = authorId, bookId = bookToReturn.Id }, bookToReturn);
 
+        }
 
+        [HttpPut("{courseId}")]
+        public ActionResult UpdateBookForAuthor(Guid authorId, Guid bookid, BookForUpdateDto book)
+        {
+            if(!_libRepository.AuthorExists(authorId))
+            {
+                return NotFound();
+            }
+
+            var bookForAuthorFromRepo = _libRepository.GetBookForAuthor(authorId, bookid);
+
+            if(bookForAuthorFromRepo == null)
+            {
+                return NotFound();
+            }
+
+            //map the entity to a BookForUpdatedDto
+            // apply the updated field values to that Dto
+            //map the BookForUpdateDto back to an entity
+            _mapper.Map(book, bookForAuthorFromRepo);
+
+            _libRepository.UpdateBookForAuthor(bookForAuthorFromRepo);
+            _libRepository.Save();
+            return NoContent();
 
         }
+
     }
 }

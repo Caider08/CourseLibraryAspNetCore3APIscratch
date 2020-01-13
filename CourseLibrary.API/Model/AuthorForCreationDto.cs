@@ -15,5 +15,8 @@ namespace CourseLibrary.API.Model
         public DateTimeOffset DateOfBirth { get; set; }
 
         public string MainCategory { get; set; }
+
+        public ICollection<BookForCreationDto> Books { get; set; }
+            = new List<BookForCreationDto>();
     }
 }
