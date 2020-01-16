@@ -15,6 +15,8 @@ namespace CourseLibrary.API.Profiles
             CreateMap<Model.BookForCreationDto, Library.API.Entities.Book > ();
 
             CreateMap<Model.BookForUpdateDto, Library.API.Entities.Book>();
+
+            CreateMap<Library.API.Entities.Book, Model.BookForUpdateDto>();
         }
         
 

@@ -110,6 +110,26 @@ namespace CourseLibrary.API.Controllers
             return Ok();
         }
 
+        [HttpDelete("{authorId}")]
+        public ActionResult DeleteAuthor(Guid authorId)
+        {
+
+            var authorFromRepo = _libraryRepository.GetAuthor(authorId);
+
+            if(authorFromRepo == null)
+            {
+                return NotFound();
+            }
+
+            //Cascade on delete is on by default in EntityFrameWorkCore so the books for the author are deleted as well
+            _libraryRepository.DeleteAuthor(authorFromRepo);
+
+            _libraryRepository.Save();
+
+            return NoContent();
+
+        }
+
         
 
     }
