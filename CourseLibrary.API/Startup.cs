@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using CourseLibrary.API.Services;
 using Library.API.Entities;
 using Library.API.Services;
 using Microsoft.AspNetCore.Builder;
@@ -75,6 +76,12 @@ namespace CourseLibrary.API
                     };
 
                 });
+
+            //register PropertyMappingService
+            services.AddTransient<IPropertyMappingService, PropertyMappingService>();
+
+            //register PropertyCheckerService
+            services.AddTransient<IPropertyCheckerService, PropertyCheckerService>();
 
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 

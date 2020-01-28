@@ -7,7 +7,7 @@ namespace CourseLibrary.API.Model
 {
     public class BookDto
     {
-       
+       //the one returned by our Controller Action ... when we don't want to just return entire record from DB
         public Guid Id { get; set; }
 
      

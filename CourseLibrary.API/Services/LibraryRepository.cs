@@ -1,4 +1,7 @@
-﻿using CourseLibrary.API.ResourceParameters;
+﻿using CourseLibrary.API.Helpers;
+using CourseLibrary.API.Model;
+using CourseLibrary.API.ResourceParameters;
+using CourseLibrary.API.Services;
 using Library.API.Entities;
 using System;
 using System.Collections.Generic;
@@ -10,9 +13,12 @@ namespace Library.API.Services
     {
         private LibraryContext _context;
 
-        public LibraryRepository(LibraryContext context)
+        private IPropertyMappingService _propertyMappingService;
+
+        public LibraryRepository(LibraryContext context, IPropertyMappingService propertyMappingService)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _propertyMappingService = propertyMappingService ?? throw new ArgumentNullException(nameof(propertyMappingService));
         }
 
         public void AddAuthor(Author author)
@@ -78,16 +84,18 @@ namespace Library.API.Services
             return _context.Authors.OrderBy(a => a.FirstName).ThenBy(a => a.LastName);
         }
 
-        public IEnumerable<Author> GetAuthors(AuthorsResourceParameters authorsResourceParams)
+        public PagedList<Author> GetAuthors(AuthorsResourceParameters authorsResourceParams)
         {
             if(authorsResourceParams == null)
             {
                 throw new ArgumentNullException(nameof(authorsResourceParams));
             }
-            if(string.IsNullOrWhiteSpace(authorsResourceParams.MainCategory) && string.IsNullOrWhiteSpace(authorsResourceParams.SearchQuery))
+            
+            //Don't want this now since we have additional parameters with the page# and page size blah blah blah
+            /*if(string.IsNullOrWhiteSpace(authorsResourceParams.MainCategory) && string.IsNullOrWhiteSpace(authorsResourceParams.SearchQuery))
             {
                 return GetAuthors();
-            }
+            }*/
 
             var collection = _context.Authors as IQueryable<Author>;
             //allows us to use Where clauses etc.. on the collection
@@ -108,7 +116,30 @@ namespace Library.API.Services
                 
             }
 
-            return collection.ToList();
+            if(!string.IsNullOrWhiteSpace(authorsResourceParams.OrderBy))
+            {
+               /* if(authorsResourceParams.OrderBy.ToLowerInvariant() == "name")
+                {
+                    collection = collection.OrderBy(a => a.FirstName).ThenBy(a => a.LastName);
+                }*/
+
+                //get property mapping dictionary
+                var authorPropertyMappingDictionary = _propertyMappingService.GetPropertyMapping<AuthorDto, Author>();
+
+                collection = collection.ApplySort(authorsResourceParams.OrderBy, authorPropertyMappingDictionary);
+                
+            }
+
+
+
+
+            //nothing affects the Db performance wise until we get here?
+            return PagedList<Author>.Create(collection, authorsResourceParams.PageNumber, authorsResourceParams.PageSize);
+            
+            /*return collection
+                .Skip(authorsResourceParams.PageSize * (authorsResourceParams.PageNumber -1)) //how much we need to skip
+                .Take(authorsResourceParams.PageSize) //how much we take per page
+                .ToList();*/
         }
 
         public IEnumerable<Author> GetAuthors(IEnumerable<Guid> authorIds)

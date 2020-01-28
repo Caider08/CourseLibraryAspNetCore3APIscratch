@@ -31,7 +31,7 @@ namespace CourseLibrary.API.Controllers
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
-        [HttpGet()]
+        [HttpGet(Name = "GetBooksForAuthor")]
         [HttpHead]
         public ActionResult<IEnumerable<BookDto>> GetBooksForAuthor(Guid authorId)
         {
@@ -67,7 +67,7 @@ namespace CourseLibrary.API.Controllers
             return Ok(_mapper.Map<BookDto>(bookForAuthorFromRepo));
         }
 
-        [HttpPost]
+        [HttpPost(Name = "CreateBookForAuthor")]
         public ActionResult<BookDto> CreateBookForAuthor(Guid authorId, BookForCreationDto book)
         {
             if (!_libRepository.AuthorExists(authorId))
