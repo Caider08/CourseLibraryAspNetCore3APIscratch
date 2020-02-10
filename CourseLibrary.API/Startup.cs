@@ -43,6 +43,12 @@ namespace CourseLibrary.API
                    expirationModelOptions.CacheLocation = Marvin.Cache.Headers.CacheLocation.Private;
 
 
+            },
+            (validationModelOptions) =>
+            {
+                validationModelOptions.MustRevalidate = true;
+
+
             });
 
             services.AddResponseCaching();
