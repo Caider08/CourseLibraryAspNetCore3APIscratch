@@ -2,6 +2,7 @@
 using CourseLibrary.API.Model;
 using Library.API.Entities;
 using Library.API.Services;
+using Marvin.Cache.Headers;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -17,6 +18,10 @@ namespace CourseLibrary.API.Controllers
 {
     [ApiController]
     [Route("api/authors/{authorId}/books")]
+    //[ResponseCache(CacheProfileName = "240SecondCacheProfile")]
+    //commented out because ETag middleware now takes care of it?
+    [HttpCacheExpiration(CacheLocation = CacheLocation.Public)]
+    [HttpCacheValidation(MustRevalidate =true)]
     public class BookController : ControllerBase
     {
 
@@ -50,6 +55,10 @@ namespace CourseLibrary.API.Controllers
 
         [HttpGet]
         [Route("{bookId}", Name = "GetBookForAuthor")]
+        //[ResponseCache(Duration = 120)]
+        //need to set this method CacheLocation to public since Globally we're set to private
+        [HttpCacheExpiration(CacheLocation = CacheLocation.Public, MaxAge = 1000)]
+        [HttpCacheValidation(MustRevalidate =false)]
         public ActionResult<BookDto> GetBookForAuthor(Guid authorId, Guid bookId)
         {
             if (!_libRepository.AuthorExists(authorId))

@@ -37,11 +37,28 @@ namespace CourseLibrary.API
             //service = a component attended for common consumption throughout the app
             //.AddMvC() was used to add things such as pages for views and TagHelpers
 
+            services.AddHttpCacheHeaders((expirationModelOptions) =>
+               {
+                   expirationModelOptions.MaxAge = 60;
+                   expirationModelOptions.CacheLocation = Marvin.Cache.Headers.CacheLocation.Private;
+
+
+            });
+
+            services.AddResponseCaching();
+
             //Authentication typically configured here
             services.AddControllers(setupAction =>
             {
                 //if this is set to false...API will return a default content type if given format is invalid / not supported by our API
                 setupAction.ReturnHttpNotAcceptable = true;
+
+                setupAction.CacheProfiles.Add("240SecondsCacheProfile",
+                                                   new CacheProfile()
+                                                   {
+                                                       Duration = 240
+                                                   });
+                
                 //if want to support XML (old way)
                 //setupAction.OutputFormatters.Add(new XmlDataContractSerializerOutputFormatter());
             })
@@ -76,6 +93,17 @@ namespace CourseLibrary.API
                     };
 
                 });
+
+            services.Configure<MvcOptions>(config =>
+            {
+                var newtonsoftJsonOutputFormatter = config.OutputFormatters
+                    .OfType<NewtonsoftJsonOutputFormatter>().FirstOrDefault();
+
+                if (newtonsoftJsonOutputFormatter != null)
+                {
+                    newtonsoftJsonOutputFormatter.SupportedMediaTypes.Add("application/vnd.marvin.hateoas+json");
+                }
+            });
 
             //register PropertyMappingService
             services.AddTransient<IPropertyMappingService, PropertyMappingService>();
@@ -120,6 +148,16 @@ namespace CourseLibrary.API
                         );
             }
 
+            app.UseResponseCaching();
+
+            //all of this app.Etc... is adding middleware
+            //ordering is important ... we want the Cacheing middleware before Controller middleware
+            //this comes after UseResponseCaching() because the ETag middleware shouldn't be used when Cache can be accessed
+
+            //below is used for Etag Middleware
+            app.UseHttpCacheHeaders();
+
+            //Controller Middleware below
             app.UseRouting();
 
             app.UseAuthorization();

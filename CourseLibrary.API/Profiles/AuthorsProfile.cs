@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CourseLibrary.API.Model;
 using CourseLibrary.API.Helpers;
+using Library.API.Entities;
 
 namespace CourseLibrary.API.Profiles
 {
@@ -19,9 +20,13 @@ namespace CourseLibrary.API.Profiles
                             opt => opt.MapFrom(src => $"{src.FirstName} {src.LastName}"))
                     .ForMember(
                              dest => dest.Age,
-                             opt => opt.MapFrom(src => src.DateOfBirth.GetCurrentAge()));
+                             opt => opt.MapFrom(src => src.DateOfBirth.GetCurrentAge(src.DateOfDeath)));
 
             CreateMap<Model.AuthorForCreationDto, Library.API.Entities.Author > ();
+
+            CreateMap<Model.AuthorForCreationWithDateofDeathDto, Library.API.Entities.Author>();
+
+            CreateMap<Author, Model.AuthorFullDto>();
 
         }
 

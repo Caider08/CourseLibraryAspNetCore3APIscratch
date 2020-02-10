@@ -11,6 +11,8 @@ using CourseLibrary.API.ResourceParameters;
 using Library.API.Entities;
 using System.Text.Json;
 using CourseLibrary.API.Services;
+using Microsoft.Net.Http.Headers;
+using CourseLibrary.API.ActionConstraints;
 
 namespace CourseLibrary.API.Controllers
 {
@@ -122,12 +124,26 @@ namespace CourseLibrary.API.Controllers
             
         }
 
+        [Produces("application/json",
+                "application/vnd.marvin.hateoas+json",
+                "application/vnd.marvin.author.full+json",
+                "application/vnd.marvin.author.full.hateoas+json",
+                "application/vnd.marvin.author.friendly+json",
+                "application/vnd.marvin.author.friendly.hateoas+json")]
+
         [HttpGet("{authorId}", Name ="GetAuthor")]
         //we give it a Name = so we can refer to it later (see the POST method)
         // curly brackets significy it's a parameter that may change
         //[HttpGet("{authorId:guid}")] if route can have Id or integer
-        public IActionResult GetAuthor(Guid authorId, string fields)
+        public IActionResult GetAuthor(Guid authorId, string fields
+            [FromHeader(Name = "Accept")] string mediaType)
         {
+            if (!MediaTypeHeaderValue.TryParse(mediaType,
+                out MediaTypeHeaderValue parsedMediaType))
+            {
+                return BadRequest();
+            }
+
             if(!_ipropertyCheckerService.TypehasProperties<AuthorDto>(fields))
             {
                 return BadRequest();
@@ -142,23 +158,108 @@ namespace CourseLibrary.API.Controllers
                 return NotFound();
             }
 
-            var links = CreateLinksForAuthor(authorId, fields);
+            var includeLinks = parsedMediaType.SubTypeWithoutSuffix
+                .EndsWith("hateoas", StringComparison.InvariantCultureIgnoreCase);
 
-            var linkedResourceToReturn =
-                _mapper.Map<AuthorDto>(authorFromRepo).ShapeData(fields)
-                    as IDictionary<string, object>;
+            IEnumerable<LinkDto> links = new List<LinkDto>();
 
-            linkedResourceToReturn.Add("links", links);
+            if(includeLinks)
+            {
+                links = CreateLinksForAuthor(authorId, fields);
+            }
 
-            return Ok(linkedResourceToReturn);
+            var primarymediaType = includeLinks ?
+                parsedMediaType.SubTypeWithoutSuffix
+                    .Substring(0, parsedMediaType.SubTypeWithoutSuffix.Length - 8)
+                    : parsedMediaType.SubTypeWithoutSuffix;
 
-           //return Ok(_mapper.Map<AuthorDto>(authorFromRepo).ShapeData(fields));
+            //full author
+            if(primarymediaType == "vnd.marvin.author.full")
+            {
+                var fullResourceToReturn = _mapper.Map<AuthorFullDto>(authorFromRepo)
+                    .ShapeData(fields) as IDictionary<string, object>;
+
+                if(includeLinks)
+                {
+                    fullResourceToReturn.Add("links", links);
+                }
+
+                return Ok(fullResourceToReturn);
+            }
+
+            //friendly author
+            var friendlyResourceToReturn = _mapper.Map<AuthorDto>(authorFromRepo)
+                .ShapeData(fields) as IDictionary<string, object>;
+
+            if(includeLinks)
+            {
+                friendlyResourceToReturn.Add("links", links);
+            }
+
+            return Ok(friendlyResourceToReturn);
+            
+            //no longer necessary
+            /*
+            if(parsedMediaType.MediaType == "application/vnd.marvin.hateoas+json")
+            {
+
+               links = CreateLinksForAuthor(authorId, fields);
+
+                var linkedResourceToReturn =
+                    _mapper.Map<AuthorDto>(authorFromRepo).ShapeData(fields)
+                        as IDictionary<string, object>;
+
+                linkedResourceToReturn.Add("links", links);
+
+                return Ok(linkedResourceToReturn);
+            }
+
+           
+           return Ok(_mapper.Map<AuthorDto>(authorFromRepo).ShapeData(fields)); 
+           */
 
         }
 
         [HttpPost(Name = "CreateAuthor")]
         //aleady have the route at the top
+        [RequestHeaderMatchesmediaTypeAttribute("Content-Type",
+            "application/json",
+            "application/vnd.marvin.authorforcreation+json")]
+        [Consumes("application/json",
+            "application/vnd.marvin.authorforcreation+json")]
         public IActionResult CreateAuthor(AuthorForCreationDto author)
+        {
+            /*if (author == null)
+            {
+                return BadRequest();
+            }*/
+            //above not needed...API already does it for us
+
+            var authorEntity = _mapper.Map<Author>(author);
+            _libraryRepository.AddAuthor(authorEntity);
+            _libraryRepository.Save();
+            //our controller should think of the dbContext like a black box...it may contain logging it may not etc...
+
+            var authorToReturn = _mapper.Map<AuthorDto>(authorEntity);
+
+            var links = CreateLinksForAuthor(authorToReturn.Id, null);
+
+            var linkedResourceToReturn = authorToReturn.ShapeData(null)
+                as IDictionary<string, object>;
+            linkedResourceToReturn.Add("links", links);
+
+            return CreatedAtRoute("GetAuthor",
+                new { authorId = linkedResourceToReturn["Id"] }, linkedResourceToReturn);
+
+
+        }
+
+        [HttpPost(Name = "CreateAuthorWithDateOfDeath")]
+        //aleady have the route at the top
+        [RequestHeaderMatchesmediaType("Content-Type",
+            "application/vnd.marvin.authorforcreationwithdateofdeath+json")]
+        [Consumes("application/vnd.marvin.authorforcreationwithdateofdeath+json")]
+        public IActionResult CreateAuthor(AuthorForCreationWithDateofDeathDto author)
         {
             /*if (author == null)
             {
